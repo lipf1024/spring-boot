@@ -78,6 +78,7 @@ class BeanDefinitionLoader {
 	BeanDefinitionLoader(BeanDefinitionRegistry registry, Object... sources) {
 		Assert.notNull(registry, "Registry must not be null");
 		Assert.notEmpty(sources, "Sources must not be empty");
+		//MainClass
 		this.sources = sources;
 		this.annotatedReader = new AnnotatedBeanDefinitionReader(registry);
 		this.xmlReader = new XmlBeanDefinitionReader(registry);
@@ -154,6 +155,7 @@ class BeanDefinitionLoader {
 			load(loader);
 		}
 		if (isComponent(source)) {
+			//以注解的方式 将启动类的备案信息存入beandefinitionmap
 			this.annotatedReader.register(source);
 			return 1;
 		}
@@ -273,6 +275,11 @@ class BeanDefinitionLoader {
 		return Package.getPackage(source.toString());
 	}
 
+	/**
+	 * 判断class上是否有component注解
+	 * @param type
+	 * @return
+	 */
 	private boolean isComponent(Class<?> type) {
 		// This has to be a bit of a guess. The only way to be sure that this type is
 		// eligible is to make a bean definition out of it and try to instantiate it.

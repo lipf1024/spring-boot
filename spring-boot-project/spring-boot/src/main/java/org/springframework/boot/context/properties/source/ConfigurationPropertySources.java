@@ -70,13 +70,18 @@ public final class ConfigurationPropertySources {
 	 */
 	public static void attach(Environment environment) {
 		Assert.isInstanceOf(ConfigurableEnvironment.class, environment);
+		//获取存储配置的容器
 		MutablePropertySources sources = ((ConfigurableEnvironment) environment).getPropertySources();
+		//获取configurationProperties
 		PropertySource<?> attached = sources.get(ATTACHED_PROPERTY_SOURCE_NAME);
 		if (attached != null && attached.getSource() != sources) {
+			//存在就先删掉
 			sources.remove(ATTACHED_PROPERTY_SOURCE_NAME);
 			attached = null;
 		}
 		if (attached == null) {
+			//将所有的配置都放在configurationProperties中
+			//将configurationProperties的优先级设置最高
 			sources.addFirst(new ConfigurationPropertySourcesPropertySource(ATTACHED_PROPERTY_SOURCE_NAME,
 					new SpringConfigurationPropertySources(sources)));
 		}

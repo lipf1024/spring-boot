@@ -92,11 +92,25 @@ public class SpringApplicationJsonEnvironmentPostProcessor implements Environmen
 
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+		//获取配置容器
 		MutablePropertySources propertySources = environment.getPropertySources();
-		propertySources.stream().map(JsonPropertyValue::get).filter(Objects::nonNull).findFirst()
+
+		/**
+		 * 获取所有PropertySource中属性为spring.application.json或SPRING_APPLICATION_JSON的值解析为json格式
+		 * 并设置到容器中
+		 */
+		propertySources.stream()
+				.map(JsonPropertyValue::get)
+				.filter(Objects::nonNull).findFirst()
 				.ifPresent((v) -> processJson(environment, v));
 	}
 
+
+	/**
+	 * 解析JSON配置
+	 * @param environment
+	 * @param propertyValue
+	 */
 	private void processJson(ConfigurableEnvironment environment, JsonPropertyValue propertyValue) {
 		JsonParser parser = JsonParserFactory.getJsonParser();
 		Map<String, Object> map = parser.parseMap(propertyValue.getJson());
@@ -146,23 +160,38 @@ public class SpringApplicationJsonEnvironmentPostProcessor implements Environmen
 		}
 	}
 
+	/**
+	 * 将json解析出的配置设置到配置容器中（设为优先级“最高”的配置）
+	 * @param environment
+	 * @param source
+	 */
 	private void addJsonPropertySource(ConfigurableEnvironment environment, PropertySource<?> source) {
 		MutablePropertySources sources = environment.getPropertySources();
+		//优先返回jndiProperties/servletContextInitParams/servletConfigInitParams
 		String name = findPropertySource(sources);
 		if (sources.contains(name)) {
+			//优先级高于找到的配置（servlet时最早初始化的配置，实际上这里也是最高优先级，第一个configProperties是包含了所有的配置了的）
 			sources.addBefore(name, source);
 		}
 		else {
+			//否则优先级最高
 			sources.addFirst(source);
 		}
 	}
 
+	/**
+	 * 优先返回jndiProperties/servletContextInitParams/servletConfigInitParams
+	 * 否则返回systemProperties
+	 * @param sources
+	 * @return
+	 */
 	private String findPropertySource(MutablePropertySources sources) {
 		if (ClassUtils.isPresent(SERVLET_ENVIRONMENT_CLASS, null)) {
 			PropertySource<?> servletPropertySource = sources.stream()
 					.filter((source) -> SERVLET_ENVIRONMENT_PROPERTY_SOURCES.contains(source.getName())).findFirst()
 					.orElse(null);
 			if (servletPropertySource != null) {
+
 				return servletPropertySource.getName();
 			}
 		}

@@ -62,6 +62,7 @@ public class ApplicationConversionService extends FormattingConversionService {
 	}
 
 	/**
+	 * 参数类型转换器（单例） 主要是处理一些配置文件中的一些特殊的参数类型
 	 * Return a shared default application {@code ConversionService} instance, lazily
 	 * building it once needed.
 	 * <p>

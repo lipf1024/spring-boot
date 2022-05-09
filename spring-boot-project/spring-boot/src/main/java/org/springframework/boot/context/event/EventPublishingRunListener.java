@@ -67,11 +67,31 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 
 	@Override
 	public void starting() {
+		/**
+		 * listener.starting()
+		 * 默认情况下会有以下几个监听器被触发
+		 * LoggingApplicationListener
+		 * BackgroundPreinitializer
+		 * DelegatingApplicationListener
+		 * LiquibaseServiceLocatorApplicationListener
+		 *
+		 */
 		this.initialMulticaster.multicastEvent(new ApplicationStartingEvent(this.application, this.args));
 	}
 
 	@Override
 	public void environmentPrepared(ConfigurableEnvironment environment) {
+		/**
+		 * 环境已准备事件，默认会触发以下监听器
+		 * ConfigFileApplicationListener
+		 * AnsiOutputApplicationListener
+		 * LoggingApplicationListener
+		 * BackgroundPreinitializer
+		 * ClasspathLoggingApplicationListener
+		 * DelegatingApplicationListener
+		 * FileEncodingApplicationListener
+		 *
+		 */
 		this.initialMulticaster
 				.multicastEvent(new ApplicationEnvironmentPreparedEvent(this.application, this.args, environment));
 	}

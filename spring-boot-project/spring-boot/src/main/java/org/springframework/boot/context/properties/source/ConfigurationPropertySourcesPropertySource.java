@@ -23,6 +23,8 @@ import org.springframework.core.env.PropertyResolver;
 import org.springframework.core.env.PropertySource;
 
 /**
+ *
+ * 将所有的配置放在PropertySource中 可以用一个PropertyResolver来解析所有的配置
  * {@link PropertySource} that exposes {@link ConfigurationPropertySource} instances so
  * that they can be used with a {@link PropertyResolver} or added to the
  * {@link Environment}.
