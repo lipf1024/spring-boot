@@ -70,7 +70,9 @@ public class AnnotationConfigServletWebServerApplicationContext extends ServletW
 	 * {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigServletWebServerApplicationContext() {
+		//字面义 通过注解获取BeanDefinition
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+		//通过设置的ClassPath获取beanDefinition
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -199,9 +201,11 @@ public class AnnotationConfigServletWebServerApplicationContext extends ServletW
 	@Override
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		super.postProcessBeanFactory(beanFactory);
+		//默认false
 		if (this.basePackages != null && this.basePackages.length > 0) {
 			this.scanner.scan(this.basePackages);
 		}
+		//默认false
 		if (!this.annotatedClasses.isEmpty()) {
 			this.reader.register(ClassUtils.toClassArray(this.annotatedClasses));
 		}

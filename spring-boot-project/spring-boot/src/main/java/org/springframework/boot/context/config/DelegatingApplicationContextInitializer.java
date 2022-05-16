@@ -50,6 +50,7 @@ public class DelegatingApplicationContextInitializer
 
 	@Override
 	public void initialize(ConfigurableApplicationContext context) {
+		//TODO 实际上就是起一个转发作用
 		ConfigurableEnvironment environment = context.getEnvironment();
 		List<Class<?>> initializerClasses = getInitializerClasses(environment);
 		if (!initializerClasses.isEmpty()) {
@@ -58,10 +59,13 @@ public class DelegatingApplicationContextInitializer
 	}
 
 	private List<Class<?>> getInitializerClasses(ConfigurableEnvironment env) {
+		//TODO 获取context.initializer.classes 指定的ApplicationContextInitializer的实现类类的全限定名
+		//实际上就是为了处理没有写在spring.factories中ApplicationContextInitializer的实现类
 		String classNames = env.getProperty(PROPERTY_NAME);
 		List<Class<?>> classes = new ArrayList<>();
 		if (StringUtils.hasLength(classNames)) {
 			for (String className : StringUtils.tokenizeToStringArray(classNames, ",")) {
+				//反射获取ApplicationContextInitializer实例
 				classes.add(getInitializerClass(className));
 			}
 		}

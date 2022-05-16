@@ -54,6 +54,7 @@ public class ServerPortInfoApplicationContextInitializer implements
 
 	@Override
 	public void initialize(ConfigurableApplicationContext applicationContext) {
+		//TODO 添加一个监听WebServerInitializedEvent事件的ApplicationListener
 		applicationContext.addApplicationListener(this);
 	}
 

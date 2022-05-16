@@ -321,8 +321,9 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 
 		private final List<PropertySourceLoader> propertySourceLoaders;
 
+		//越靠前配置的优先级越低
 		private Deque<Profile> profiles;
-
+        //记录加载过程中已经被加载的配置信息
 		private List<Profile> processedProfiles;
 
 		private boolean activatedProfiles;
@@ -360,13 +361,13 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 			FilteredPropertySource.apply(this.environment,//springh环境
 					DEFAULT_PROPERTIES,//defaultProperties
 					LOAD_FILTERED_PROPERTY,//[spring.profiles.active,spring.profiles.include]
-					(defaultProperties) -> {
+					(defaultProperties) -> {//null
 						this.profiles = new LinkedList<>();
 						this.processedProfiles = new LinkedList<>();
 
 						this.activatedProfiles = false;
 						this.loaded = new LinkedHashMap<>();
-						//开始加载配置文件（null/active/include）或（null/default）
+						//读取配置的相关信息，为后续加载配置文件做准备（null/active/include）或（null/default）
 						initializeProfiles();
 						while (!this.profiles.isEmpty()) {
 							//fifo
@@ -400,17 +401,17 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 		private void initializeProfiles() {
 			// The default profile for these purposes is represented as null. We add it
 			// first so that it is processed first and has lowest priority.
-			//第一个放置为null（优先级最低）为了防止没有指定active配置的时候可以有default处理,即加载application.xxx
+			//TODO 第一个放置为null（优先级最低）为了防止没有指定active配置的时候可以有default处理,即加载application.xxx
 			this.profiles.add(null);
 
-			//spring.profiles.active中指定的的配置（命令行）
+			//TODO spring.profiles.active中指定的的配置
 			Set<Profile> activatedViaProperty = getProfilesFromProperty(ACTIVE_PROFILES_PROPERTY);
 
-			//spring.profiles.include中指定的的配置（命令行）
+			//TODO spring.profiles.include中指定的的配置
 			Set<Profile> includedViaProperty = getProfilesFromProperty(INCLUDE_PROFILES_PROPERTY);
 
-			//TODO 返回该环境其他显式激活的配置文件集，已经添加过了，就不会再重复添加（除了 spring.profiles.active 和 spring.profiles.include指定的配置以外 ）
-			//实际上是为了去重
+			//TODO 检查一下又没有environment中有没有漏掉的active profile
+			// (直接设置到Environment.activeProfiles属性中的不在配置容器中的)
 			List<Profile> otherActiveProfiles = getOtherActiveProfiles(activatedViaProperty, includedViaProperty);
 
 			//添加otherActiveProfiles
@@ -422,8 +423,6 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 			//添加includedViaProperty
 			this.profiles.addAll(includedViaProperty);
 
-			// TODO 将 activatedViaProperty集添加到 profiles集中，以确保 spring.profiles.active指定的值生效
-			// 同时移除默认配置
 			addActiveProfiles(activatedViaProperty);
 			//如果没有profiles仍然为null
 			if (this.profiles.size() == 1) { // only has null profile
@@ -437,17 +436,34 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 			}
 		}
 
+		/**
+		 *从环境配置中读取profilesProperty的参数封装成profile
+		 * @param profilesProperty
+		 * @return
+		 */
 		private Set<Profile> getProfilesFromProperty(String profilesProperty) {
+			//检查所有的PropertySource中是否包含有这个key
 			if (!this.environment.containsProperty(profilesProperty)) {
 				return Collections.emptySet();
 			}
+			//获取对应的参数
 			Binder binder = Binder.get(this.environment);
 			Set<Profile> profiles = getProfiles(binder, profilesProperty);
 			return new LinkedHashSet<>(profiles);
 		}
 
+		/**
+		 * 看有没有漏掉的active profile
+		 * @param activatedViaProperty
+		 * @param includedViaProperty
+		 * @return
+		 */
 		private List<Profile> getOtherActiveProfiles(Set<Profile> activatedViaProperty, Set<Profile> includedViaProperty) {
-			return Arrays.stream(this.environment.getActiveProfiles()).map(Profile::new).filter((profile) -> !activatedViaProperty.contains(profile) && !includedViaProperty.contains(profile)).collect(Collectors.toList());
+			return Arrays.stream(this.environment.getActiveProfiles()) //在SpringApplication.configureEnvironment中设置的（一般是从命令行参数读取到的）
+					.map(Profile::new)
+					.filter((profile) -> !activatedViaProperty.contains(profile)
+							&& !includedViaProperty.contains(profile))
+					.collect(Collectors.toList());
 		}
 
 		void addActiveProfiles(Set<Profile> profiles) {

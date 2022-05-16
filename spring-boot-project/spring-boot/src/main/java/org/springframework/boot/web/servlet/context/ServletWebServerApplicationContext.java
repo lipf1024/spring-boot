@@ -130,8 +130,10 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 	 */
 	@Override
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+		//注册ServletContextAwareProcessor
 		beanFactory.addBeanPostProcessor(new WebApplicationContextServletContextAwareProcessor(this));
 		beanFactory.ignoreDependencyInterface(ServletContextAware.class);
+		//注册web环境下的scope("request", "session", "globalSession")
 		registerWebApplicationScopes();
 	}
 
@@ -236,8 +238,13 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		servletContext.setAttribute(ServletContextScope.class.getName(), appScope);
 	}
 
+	/**
+	 * 注册web环境下的scope
+	 */
 	private void registerWebApplicationScopes() {
+		//获取BeanFactory中已经存在的Scope
 		ExistingWebApplicationScopes existingScopes = new ExistingWebApplicationScopes(getBeanFactory());
+		//
 		WebApplicationContextUtils.registerWebApplicationScopes(getBeanFactory());
 		existingScopes.restore();
 	}
@@ -353,12 +360,14 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 	 * Utility class to store and restore any user defined scopes. This allow scopes to be
 	 * registered in an ApplicationContextInitializer in the same way as they would in a
 	 * classic non-embedded web application context.
+	 * 处理任何用户自定义的scope,允许在ApplicationContextInitializer中定义scope
 	 */
 	public static class ExistingWebApplicationScopes {
 
 		private static final Set<String> SCOPES;
 
 		static {
+			//session scope,request scope
 			Set<String> scopes = new LinkedHashSet<>();
 			scopes.add(WebApplicationContext.SCOPE_REQUEST);
 			scopes.add(WebApplicationContext.SCOPE_SESSION);
@@ -367,6 +376,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 
 		private final ConfigurableListableBeanFactory beanFactory;
 
+        //缓存scopes
 		private final Map<String, Scope> scopes = new HashMap<>();
 
 		public ExistingWebApplicationScopes(ConfigurableListableBeanFactory beanFactory) {
@@ -379,6 +389,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 			}
 		}
 
+		//恢复scope
 		public void restore() {
 			this.scopes.forEach((key, value) -> {
 				if (logger.isInfoEnabled()) {

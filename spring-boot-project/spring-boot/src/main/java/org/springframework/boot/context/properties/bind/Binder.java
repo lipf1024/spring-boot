@@ -502,8 +502,11 @@ public class Binder {
 	 * @since 2.2.0
 	 */
 	public static Binder get(Environment environment, BindHandler defaultBindHandler) {
+		//TODO ConfigurationPropertySourcesPropertySource
 		Iterable<ConfigurationPropertySource> sources = ConfigurationPropertySources.get(environment);
+		//配置中的占位符解析
 		PropertySourcesPlaceholdersResolver placeholdersResolver = new PropertySourcesPlaceholdersResolver(environment);
+		//TODO
 		return new Binder(sources, placeholdersResolver, null, null, defaultBindHandler);
 	}
 

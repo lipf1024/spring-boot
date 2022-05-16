@@ -311,15 +311,16 @@ public class SpringApplication {
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
 			//TODO 构造容器环境（加载配置）
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
-			//设置需要忽略的bean
+			//设置需要忽略的bean（将spring.beaninfo.ignore的信息设置到JVM环境变量中）
 			configureIgnoreBeanInfo(environment);
+			//打印banner
 			Banner printedBanner = printBanner(environment);
-			//TODO 创建容器(AnnotationConfigServletWebServerApplicationContext)
+			//TODO 创建容器实例(AnnotationConfigServletWebServerApplicationContext)
 			context = createApplicationContext();
 			//实例化SpringBootExceptionReporter用来支持关于启动的错误
 			exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
 					new Class[] { ConfigurableApplicationContext.class }, context);
-			//准备容器
+			//TODO 准备容器
 			prepareContext(context, environment, listeners, applicationArguments, printedBanner);
 			//刷新容器
 			refreshContext(context);
@@ -354,12 +355,15 @@ public class SpringApplication {
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
 		//解析命令行参数 以及读取spring.profiles.active设置到Environment中
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
+		//配置容器中添加configurationProperties
 		ConfigurationPropertySources.attach(environment);
 		//TODO 发布环境已准备事件 加载配置文件 非常重要
 		listeners.environmentPrepared(environment);
+		//绑定当前SpringApplication Instance 到“spring.main”
+		//TODO 看起来是为了处理SpEL
 		bindToSpringApplication(environment);
-		//false
 		if (!this.isCustomEnvironment) {
+			//转换Environment类型（默认情况下这里类型应该是和deduceEnvironmentClass()一致的）
 			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
 					deduceEnvironmentClass());
 		}
@@ -393,7 +397,7 @@ public class SpringApplication {
 		context.setEnvironment(environment);
 		//执行容器的后置处理
 		postProcessApplicationContext(context);
-		//执行容器中的ApplicationContextInitializer（包括spring.factories和自定义实例）
+		//TODO 执行容器中的ApplicationContextInitializer（包括spring.factories和自定义实例）
 		applyInitializers(context);
 		//TODO 发送容器已经准备好的的事件
 		listeners.contextPrepared(context);
@@ -403,6 +407,7 @@ public class SpringApplication {
 			logStartupProfileInfo(context);
 		}
 		// Add boot specific singleton beans
+		//准备添加一些实例
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
 		//将启动参数注入容器
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
@@ -411,6 +416,7 @@ public class SpringApplication {
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
 		}
 		if (beanFactory instanceof DefaultListableBeanFactory) {
+			//是否允许注入的实例相互覆盖 默认false
 			((DefaultListableBeanFactory) beanFactory)
 					.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}
@@ -538,7 +544,7 @@ public class SpringApplication {
 		}
 		//解析一下启动时的命令行参数 （并将该配置置为最高的优先级）
 		configurePropertySources(environment, args);
-        //读取jvm环境变量中的spring.profiles.active属性
+        //读取配置容器中的spring.profiles.active属性 同时设置activeProfiles属性
 		configureProfiles(environment, args);
 	}
 
@@ -552,7 +558,7 @@ public class SpringApplication {
 	protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
 		//拿到存放配置的容器
 		MutablePropertySources sources = environment.getPropertySources();
-		//默认defaultProperties为null
+		//TODO SpringApplication.setDefaultProperties显示的设置的配置参数
 		if (this.defaultProperties != null && !this.defaultProperties.isEmpty()) {
 			sources.addLast(new MapPropertySource("defaultProperties", this.defaultProperties));
 		}
@@ -589,8 +595,9 @@ public class SpringApplication {
 	protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
 		//初始情况下additionalProfiles为空
 		Set<String> profiles = new LinkedHashSet<>(this.additionalProfiles);
-		//AbstractEnvironment.getActiveProfiles()
-		//获取jvm环境变量中配置的spring.profiles.active
+		//TODO AbstractEnvironment.getActiveProfiles()
+		//获取enviroment配置容器中中配置的spring.profiles.active
+		//TODO 可能是从 jvm环境变量中/命令行参数中/系统环境变量中 等等。。。。。
 		profiles.addAll(Arrays.asList(environment.getActiveProfiles()));
 		//将得到profile重新设置回Environment
 		// (.....多此一举，第二行代码已经涉过了)
@@ -610,6 +617,7 @@ public class SpringApplication {
 	 */
 	protected void bindToSpringApplication(ConfigurableEnvironment environment) {
 		try {
+			//绑定当前的SpringApplication到“spring.main” 为了处理SpEL
 			Binder.get(environment).bind("spring.main", Bindable.ofInstance(this));
 		}
 		catch (Exception ex) {
@@ -667,10 +675,12 @@ public class SpringApplication {
 	 * @param context the application context
 	 */
 	protected void postProcessApplicationContext(ConfigurableApplicationContext context) {
+		//false
 		if (this.beanNameGenerator != null) {
 			context.getBeanFactory().registerSingleton(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR,
 					this.beanNameGenerator);
 		}
+		//false
 		if (this.resourceLoader != null) {
 			if (context instanceof GenericApplicationContext) {
 				((GenericApplicationContext) context).setResourceLoader(this.resourceLoader);
@@ -679,6 +689,7 @@ public class SpringApplication {
 				((DefaultResourceLoader) context).setClassLoader(this.resourceLoader.getClassLoader());
 			}
 		}
+		//true
 		if (this.addConversionService) {
 			context.getBeanFactory().setConversionService(ApplicationConversionService.getSharedInstance());
 		}
@@ -692,6 +703,16 @@ public class SpringApplication {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected void applyInitializers(ConfigurableApplicationContext context) {
+		/**
+		 * 默认情况下会执行以下几个初始化器
+		 * SharedMetadataReaderFactoryContextInitializer
+		 * DelegatingApplicationContextInitializer
+		 * ContextIdApplicationContextInitializer
+		 * ConditionEvaluationReportLoggingListener
+		 * ConfigurationWarningsApplicationContextInitializer
+		 * RSocketPortInfoApplicationContextInitializer
+		 * ServerPortInfoApplicationContextInitializer
+		 */
 		for (ApplicationContextInitializer initializer : getInitializers()) {
 			Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(initializer.getClass(),
 					ApplicationContextInitializer.class);
@@ -751,6 +772,7 @@ public class SpringApplication {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
 		}
+		//创建DefinitionLoader实例
 		BeanDefinitionLoader loader = createBeanDefinitionLoader(getBeanDefinitionRegistry(context), sources);
 		if (this.beanNameGenerator != null) {
 			loader.setBeanNameGenerator(this.beanNameGenerator);
@@ -1100,6 +1122,7 @@ public class SpringApplication {
 	}
 
 	/**
+	 * TODO SpringApplication.setDefaultProperties设置配置参数
 	 * Convenient alternative to {@link #setDefaultProperties(Map)}.
 	 * @param defaultProperties some {@link Properties}
 	 */

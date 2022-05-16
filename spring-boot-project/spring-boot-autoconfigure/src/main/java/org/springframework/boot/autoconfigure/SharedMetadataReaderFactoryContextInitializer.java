@@ -53,6 +53,7 @@ class SharedMetadataReaderFactoryContextInitializer
 
 	@Override
 	public void initialize(ConfigurableApplicationContext applicationContext) {
+		//ConfigurableApplicationContext中添加CachingMetadataReaderFactoryPostProcessor
 		applicationContext.addBeanFactoryPostProcessor(new CachingMetadataReaderFactoryPostProcessor());
 	}
 
@@ -81,11 +82,15 @@ class SharedMetadataReaderFactoryContextInitializer
 
 		@Override
 		public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+			//注册SharedMetadataReaderFactoryBean的BeanDefinition实例
 			register(registry);
+			//将SharedMetadataReaderFactoryBean设置到ConfigurationAnnotationProcessor内部成员（metadataReaderFactory）
 			configureConfigurationClassPostProcessor(registry);
 		}
 
 		private void register(BeanDefinitionRegistry registry) {
+			//引入新的BeanDefinition SharedMetadataReaderFactoryBean
+			//显而易见是一个全局共享的MetaDataRead工厂
 			BeanDefinition definition = BeanDefinitionBuilder
 					.genericBeanDefinition(SharedMetadataReaderFactoryBean.class, SharedMetadataReaderFactoryBean::new)
 					.getBeanDefinition();

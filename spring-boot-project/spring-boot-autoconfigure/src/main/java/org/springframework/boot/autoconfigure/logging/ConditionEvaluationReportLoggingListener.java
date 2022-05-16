@@ -80,9 +80,11 @@ public class ConditionEvaluationReportLoggingListener
 	@Override
 	public void initialize(ConfigurableApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
+		//TODO applicationContext中添加ConditionEvaluationReportListener
 		applicationContext.addApplicationListener(new ConditionEvaluationReportListener());
 		if (applicationContext instanceof GenericApplicationContext) {
 			// Get the report early in case the context fails to load
+			//今早获取异常报告
 			this.report = ConditionEvaluationReport.get(this.applicationContext.getBeanFactory());
 		}
 	}

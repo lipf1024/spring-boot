@@ -46,6 +46,13 @@ class FilteredPropertySource extends PropertySource<PropertySource<?>> {
 		return getSource().getProperty(name);
 	}
 
+	/**
+	 * 执行配置文件加载的逻辑
+	 * @param environment
+	 * @param propertySourceName
+	 * @param filteredProperties
+	 * @param operation
+	 */
 	static void apply(ConfigurableEnvironment environment, String propertySourceName, Set<String> filteredProperties,
 			Consumer<PropertySource<?>> operation) {
 		//获取配置容器

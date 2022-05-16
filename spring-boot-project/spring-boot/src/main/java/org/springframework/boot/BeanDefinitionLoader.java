@@ -80,12 +80,16 @@ class BeanDefinitionLoader {
 		Assert.notEmpty(sources, "Sources must not be empty");
 		//MainClass
 		this.sources = sources;
+		//Notice: 创建AnnotationConfigServletWebServerApplicationContext时其中就有创建这个对象
 		this.annotatedReader = new AnnotatedBeanDefinitionReader(registry);
+		//从xml到BeanDefinition的解析器
 		this.xmlReader = new XmlBeanDefinitionReader(registry);
 		if (isGroovyPresent()) {
 			this.groovyReader = new GroovyBeanDefinitionReader(registry);
 		}
+		//同样也在创建AnnotationConfigServletWebServerApplicationContext实例时创建过
 		this.scanner = new ClassPathBeanDefinitionScanner(registry);
+		//避免重复添加主类
 		this.scanner.addExcludeFilter(new ClassExcludeFilter(sources));
 	}
 
@@ -133,6 +137,7 @@ class BeanDefinitionLoader {
 
 	private int load(Object source) {
 		Assert.notNull(source, "Source must not be null");
+		//因为是MainClass 所以进这个分支
 		if (source instanceof Class<?>) {
 			return load((Class<?>) source);
 		}
@@ -155,7 +160,7 @@ class BeanDefinitionLoader {
 			load(loader);
 		}
 		if (isComponent(source)) {
-			//以注解的方式 将启动类的备案信息存入beandefinitionmap
+
 			this.annotatedReader.register(source);
 			return 1;
 		}

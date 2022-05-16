@@ -56,6 +56,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 
 	@Override
 	public void initialize(ConfigurableApplicationContext context) {
+		//在ConfigurableApplicationContext中添加ConfigurationWarningsPostProcessor
 		context.addBeanFactoryPostProcessor(new ConfigurationWarningsPostProcessor(getChecks()));
 	}
 
@@ -64,6 +65,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 	 * @return the checks to apply
 	 */
 	protected Check[] getChecks() {
+		//检查@omponentScan注解设置的package信息
 		return new Check[] { new ComponentScanPackageCheck() };
 	}
 
@@ -90,6 +92,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 
 		@Override
 		public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+			//[ComponentScanPackageCheck]
 			for (Check check : this.checks) {
 				String message = check.getWarning(registry);
 				if (StringUtils.hasLength(message)) {
@@ -123,6 +126,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 	}
 
 	/**
+	 * 检查@ComponentScan注解
 	 * {@link Check} for {@code @ComponentScan} on problematic package.
 	 */
 	protected static class ComponentScanPackageCheck implements Check {
@@ -130,6 +134,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 		private static final Set<String> PROBLEM_PACKAGES;
 
 		static {
+			//需要扫描的包中不能包含org 或 org.springframework
 			Set<String> packages = new HashSet<>();
 			packages.add("org.springframework");
 			packages.add("org");
@@ -138,36 +143,57 @@ public class ConfigurationWarningsApplicationContextInitializer
 
 		@Override
 		public String getWarning(BeanDefinitionRegistry registry) {
+			//获取需要扫描的package
 			Set<String> scannedPackages = getComponentScanningPackages(registry);
+			//检查package是否存在问题
 			List<String> problematicPackages = getProblematicPackages(scannedPackages);
 			if (problematicPackages.isEmpty()) {
 				return null;
 			}
+			//返回warning
 			return "Your ApplicationContext is unlikely to start due to a @ComponentScan of "
 					+ StringUtils.collectionToDelimitedString(problematicPackages, ", ") + ".";
 		}
 
+		/**
+		 * 获取@ComponentScan需要扫描的包名
+		 * @param registry
+		 * @return
+		 */
 		protected Set<String> getComponentScanningPackages(BeanDefinitionRegistry registry) {
 			Set<String> packages = new LinkedHashSet<>();
+			//获取当前所有已经注册的BeanDefinition名称
 			String[] names = registry.getBeanDefinitionNames();
 			for (String name : names) {
+				//获取BeanDefinition
 				BeanDefinition definition = registry.getBeanDefinition(name);
+				//如果是AnnotatedBeanDefinition
 				if (definition instanceof AnnotatedBeanDefinition) {
 					AnnotatedBeanDefinition annotatedDefinition = (AnnotatedBeanDefinition) definition;
+					//如果有@ComponentScan注解将设置的包名加入到packages中
 					addComponentScanningPackages(packages, annotatedDefinition.getMetadata());
 				}
 			}
 			return packages;
 		}
 
+		/**
+		 * 获取需要扫描的package
+		 * @param packages
+		 * @param metadata
+		 */
 		private void addComponentScanningPackages(Set<String> packages, AnnotationMetadata metadata) {
 			AnnotationAttributes attributes = AnnotationAttributes
 					.fromMap(metadata.getAnnotationAttributes(ComponentScan.class.getName(), true));
+			//如果有ComponentScan注解
 			if (attributes != null) {
+				//注解中属性设置的值
 				addPackages(packages, attributes.getStringArray("value"));
 				addPackages(packages, attributes.getStringArray("basePackages"));
+				//获取注解指定的class所在的package设置进去
 				addClasses(packages, attributes.getStringArray("basePackageClasses"));
 				if (packages.isEmpty()) {
+					//如果依旧是空 就获取MainClass所在的包
 					packages.add(ClassUtils.getPackageName(metadata.getClassName()));
 				}
 			}
@@ -187,9 +213,15 @@ public class ConfigurationWarningsApplicationContextInitializer
 			}
 		}
 
+		/**
+		 * 检查package是否存在问题
+		 * @param scannedPackages
+		 * @return
+		 */
 		private List<String> getProblematicPackages(Set<String> scannedPackages) {
 			List<String> problematicPackages = new ArrayList<>();
 			for (String scannedPackage : scannedPackages) {
+				//检查package
 				if (isProblematicPackage(scannedPackage)) {
 					problematicPackages.add(getDisplayName(scannedPackage));
 				}
@@ -197,10 +229,17 @@ public class ConfigurationWarningsApplicationContextInitializer
 			return problematicPackages;
 		}
 
+		/**
+		 * 判断package是否存在问题
+		 * @param scannedPackage
+		 * @return
+		 */
 		private boolean isProblematicPackage(String scannedPackage) {
+			//空路径
 			if (scannedPackage == null || scannedPackage.isEmpty()) {
 				return true;
 			}
+			//非法路径
 			return PROBLEM_PACKAGES.contains(scannedPackage);
 		}
 
